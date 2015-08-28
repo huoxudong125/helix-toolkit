@@ -70,7 +70,7 @@ namespace HelixToolkit.Wpf.SharpDX
             this.Groups = new List<Group>();
             this.Materials = new Dictionary<string, MaterialDefinition>();
 
-            this.smoothingGroupMaps = new Dictionary<long, Dictionary<int, int>>();
+            this.smoothingGroupMaps = new Dictionary<long, Dictionary<Tuple<int, int, int>, int>>();
         }
 
         /// <summary>
@@ -185,6 +185,17 @@ namespace HelixToolkit.Wpf.SharpDX
                     }
 
                     line = line.Trim();
+                    while (line.EndsWith("\\")) 
+                    {
+                        var nextLine = this.Reader.ReadLine();
+                        while (nextLine.Length == 0) 
+                        {
+                            nextLine = this.Reader.ReadLine();
+                        }
+
+                        line = line.TrimEnd('\\') + nextLine;
+                    }
+
                     if (line.StartsWith("#") || line.Length == 0)
                     {
                         continue;
@@ -321,9 +332,9 @@ namespace HelixToolkit.Wpf.SharpDX
         /// </summary>
         /// <remarks>
         /// The outer dictionary maps from a smoothing group number to a Dictionary&lt;long,int&gt;.
-        /// The inner dictionary maps from an obj file vertex index to a vertex index in the current group.
+        /// The inner dictionary maps from an obj file (vertex, texture coordinates, normal) index to a vertex index in the current group.
         /// </remarks>
-        private readonly Dictionary<long, Dictionary<int, int>> smoothingGroupMaps;
+        private readonly Dictionary<long, Dictionary<Tuple<int, int, int>, int>> smoothingGroupMaps;
 
         /// <summary>
         /// The current smoothing group.
@@ -521,14 +532,14 @@ namespace HelixToolkit.Wpf.SharpDX
             var textureCoordinates = builder.TextureCoordinates;
             var normals = builder.Normals;
 
-            Dictionary<int, int> smoothingGroupMap = null;
+            Dictionary<Tuple<int, int, int>, int> smoothingGroupMap = null;
 
             // If a smoothing group is defined, get the map from obj-file-index to current-group-vertex-index.
             if (this.currentSmoothingGroup != 0)
             {
                 if (!this.smoothingGroupMaps.TryGetValue(this.currentSmoothingGroup, out smoothingGroupMap))
                 {
-                    smoothingGroupMap = new Dictionary<int, int>();
+                    smoothingGroupMap = new Dictionary<Tuple<int, int, int>, int>();
                     this.smoothingGroupMaps.Add(this.currentSmoothingGroup, smoothingGroupMap);
                 }
             }
@@ -544,23 +555,23 @@ namespace HelixToolkit.Wpf.SharpDX
 
                 var ff = field.Split('/');
                 int vi = int.Parse(ff[0]);
-                int vti = ff.Length > 1 && ff[1].Length > 0 ? int.Parse(ff[1]) : -1;
-                int vni = ff.Length > 2 && ff[2].Length > 0 ? int.Parse(ff[2]) : -1;
+                int vti = ff.Length > 1 && ff[1].Length > 0 ? int.Parse(ff[1]) : int.MaxValue;
+                int vni = ff.Length > 2 && ff[2].Length > 0 ? int.Parse(ff[2]) : int.MaxValue;
 
                 // Handle relative indices (negative numbers)
                 if (vi < 0)
                 {
-                    vi = this.Points.Count + vi;
+                    vi = this.Points.Count + vi + 1;
                 }
 
                 if (vti < 0)
                 {
-                    vti = this.TextureCoordinates.Count + vti;
+                    vti = this.TextureCoordinates.Count + vti + 1;
                 }
 
                 if (vni < 0)
                 {
-                    vni = this.Normals.Count + vni;
+                    vni = this.Normals.Count + vni + 1;
                 }
 
                 // Check if the indices are valid
@@ -574,14 +585,14 @@ namespace HelixToolkit.Wpf.SharpDX
                     throw new FileFormatException(string.Format("Invalid vertex index ({0}) on line {1}.", vi, this.currentLineNo));
                 }
 
-                if (vti == -1)
+                if (vti == int.MaxValue)
                 {
                     // turn off texture coordinates in the builder
                     //builder.CreateTextureCoordinates = false;
                     builder.TextureCoordinates = null;
                 }
 
-                if (vni == -1)
+                if (vni == int.MaxValue)
                 {
                     // turn off normals in the builder
                     //builder.CreateNormals = false;
@@ -614,8 +625,10 @@ namespace HelixToolkit.Wpf.SharpDX
 
                 if (smoothingGroupMap != null)
                 {
+                    var key = Tuple.Create(vi, vti, vni);
+
                     int vix;
-                    if (smoothingGroupMap.TryGetValue(vi, out vix))
+                    if (smoothingGroupMap.TryGetValue(key, out vix))
                     {
                         // use the index of a previously defined vertex
                         addVertex = false;
@@ -624,7 +637,7 @@ namespace HelixToolkit.Wpf.SharpDX
                     {
                         // add a new vertex
                         vix = positions.Count;
-                        smoothingGroupMap.Add(vi, vix);
+                        smoothingGroupMap.Add(key, vix);
                     }
 
                     faceIndices.Add(vix);

@@ -3,9 +3,8 @@ version: 2015.1.{build}
 environment:
   nuget_api_key:
     secure: kM3Kse+ivuuE5RVoe6dPdw+aguWx56K2YeXujGa9tMPQTms3lv7QxNpTLFMALYNa
-      
+
 install:
-  - cinst stylecop -y
   - cinst LynxToolkit -y
   - cinst gitlink -Pre -y
 
@@ -18,7 +17,8 @@ build:
   verbosity: normal
 
 before_build:
-  - cmd: UpdateVersionNumbers /Version=%APPVEYOR_BUILD_VERSION% /Dependency=HelixToolkit /ExtractReleaseNotes=CHANGELOG.md /Directory=Source
+  - nuget restore .\Source\HelixToolkit.Wpf.SharpDX.sln
+  - cmd: UpdateVersionNumbers /Version=%APPVEYOR_BUILD_VERSION% /ExtractReleaseNotes=CHANGELOG.md /Directory=Source
 
 after_build:
   - cmd: gitlink c:\projects\helix-toolkit -u https://github.com/helix-toolkit/helix-toolkit -b master -f Source/HelixToolkit.AppVeyor.sln

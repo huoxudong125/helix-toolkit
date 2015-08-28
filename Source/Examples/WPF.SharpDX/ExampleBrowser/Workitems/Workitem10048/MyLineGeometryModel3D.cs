@@ -8,7 +8,7 @@ namespace Workitem10048
 {
     using System.Collections.Generic;
     using System.Windows;
-    using System.Windows.Input;
+    using System.Windows.Forms;
 
     using HelixToolkit.Wpf.SharpDX;
     using SharpDX;
@@ -27,8 +27,9 @@ namespace Workitem10048
             }
 
             var result = base.HitTest(rayWS, ref hits);
+            var pressedMouseButtons = Viewport3DX.GetPressedMouseButtons();
 
-            if (Mouse.LeftButton == MouseButtonState.Pressed)
+            if (pressedMouseButtons == 0 || pressedMouseButtons.HasFlag(MouseButtons.Left))
             {
                 this.Color = result ? Color.Red : this.initialColor.Value;
             }

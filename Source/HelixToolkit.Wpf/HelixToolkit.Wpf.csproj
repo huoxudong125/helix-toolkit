@@ -14,7 +14,6 @@
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
-    <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -50,6 +49,9 @@
     <AssemblyOriginatorKeyFile>HelixToolkit.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="ExifLib">
+      <HintPath>..\packages\ExifLib.1.4.3.0\lib\net40\ExifLib.dll</HintPath>
+    </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
@@ -275,6 +277,7 @@
     <None Include="Class diagrams\Media3D\ModelDiagram.cd" />
     <Resource Include="ShaderEffects\InterlacedEffect.ps" />
     <None Include="HelixToolkit.snk" />
+    <None Include="packages.config" />
     <None Include="ShaderEffects\AnaglyphEffect.fx" />
     <Resource Include="ShaderEffects\AnaglyphEffect.ps" />
     <None Include="ShaderEffects\compileEffects.cmd" />
@@ -340,3 +343,4 @@
   </Target>
   -->
 </Project>
+

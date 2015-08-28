@@ -30,9 +30,9 @@ namespace HelixToolkit.Wpf
         /// </summary>
         /// <remarks>
         /// The outer dictionary maps from a smoothing group number to a dictionary.
-        /// The inner dictionary maps from an obj file vertex index to a vertex index in the current group.
+        /// The inner dictionary maps from an obj file (vertex, texture coordinates, normal) index to a vertex index in the current group.
         /// </remarks>
-        private readonly Dictionary<long, Dictionary<int, int>> smoothingGroupMaps;
+        private readonly Dictionary<long, Dictionary<Tuple<int, int, int>, int>> smoothingGroupMaps;
 
         /// <summary>
         /// The current smoothing group.
@@ -63,7 +63,7 @@ namespace HelixToolkit.Wpf
             this.Groups = new List<Group>();
             this.Materials = new Dictionary<string, MaterialDefinition>();
 
-            this.smoothingGroupMaps = new Dictionary<long, Dictionary<int, int>>();
+            this.smoothingGroupMaps = new Dictionary<long, Dictionary<Tuple<int, int, int>, int>>();
 
             // File format specifications
             // http://en.wikipedia.org/wiki/Obj
@@ -195,6 +195,17 @@ namespace HelixToolkit.Wpf
                     }
 
                     line = line.Trim();
+                    while (line.EndsWith("\\")) 
+                    {
+                        var nextLine = this.Reader.ReadLine();
+                        while (nextLine.Length == 0) 
+                        {
+                            nextLine = this.Reader.ReadLine();
+                        }
+
+                        line = line.TrimEnd('\\') + nextLine;
+                    }
+
                     if (line.StartsWith("#") || line.Length == 0)
                     {
                         continue;
@@ -460,14 +471,14 @@ namespace HelixToolkit.Wpf
             var textureCoordinates = builder.TextureCoordinates;
             var normals = builder.Normals;
 
-            Dictionary<int, int> smoothingGroupMap = null;
+            Dictionary<Tuple<int, int, int>, int> smoothingGroupMap = null;
 
             // If a smoothing group is defined, get the map from obj-file-index to current-group-vertex-index.
             if (this.currentSmoothingGroup != 0)
             {
                 if (!this.smoothingGroupMaps.TryGetValue(this.currentSmoothingGroup, out smoothingGroupMap))
                 {
-                    smoothingGroupMap = new Dictionary<int, int>();
+                    smoothingGroupMap = new Dictionary<Tuple<int, int, int>, int>();
                     this.smoothingGroupMaps.Add(this.currentSmoothingGroup, smoothingGroupMap);
                 }
             }
@@ -489,17 +500,17 @@ namespace HelixToolkit.Wpf
                 // Handle relative indices (negative numbers)
                 if (vi < 0)
                 {
-                    vi = this.Points.Count + vi;
+                    vi = this.Points.Count + vi + 1;
                 }
 
                 if (vti < 0)
                 {
-                    vti = this.TextureCoordinates.Count + vti;
+                    vti = this.TextureCoordinates.Count + vti + 1;
                 }
 
                 if (vni < 0)
                 {
-                    vni = this.Normals.Count + vni;
+                    vni = this.Normals.Count + vni + 1;
                 }
 
                 // Check if the indices are valid
@@ -554,8 +565,10 @@ namespace HelixToolkit.Wpf
 
                 if (smoothingGroupMap != null)
                 {
+                    var key = Tuple.Create(vi, vti, vni);
+
                     int vix;
-                    if (smoothingGroupMap.TryGetValue(vi, out vix))
+                    if (smoothingGroupMap.TryGetValue(key, out vix))
                     {
                         // use the index of a previously defined vertex
                         addVertex = false;
@@ -564,7 +577,7 @@ namespace HelixToolkit.Wpf
                     {
                         // add a new vertex
                         vix = positions.Count;
-                        smoothingGroupMap.Add(vi, vix);
+                        smoothingGroupMap.Add(key, vix);
                     }
 
                     faceIndices.Add(vix);
